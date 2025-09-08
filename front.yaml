@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-frontend-deployment
+  namespace: aithentic-${env}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aithentic-core-frontend
+  template:
+    metadata:
+      labels:
+        app: aithentic-core-frontend
+    spec:
+      nodeSelector:
+        instance-type: spot
+      tolerations:
+      - effect: NoSchedule
+        key: instance-type
+        operator: Equal
+        value: spot
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - aithentic-core-frontend
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: aithentic-core-frontend-container
+        image: ${image}
+        envFrom:
+        - configMapRef:
+            name: aithentic-core-${env}-api.k8s.configmap
+        resources:
+            requests:
+               memory: "512Mi"
+               cpu: "128m"
+            limits:
+               memory: "4096Mi"
+               cpu: "3072m"
+        ports:
+          - containerPort: 8083
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aithentic-core-frontend-service
+  namespace: aithentic-${env}
+spec:
+  selector:
+    app: aithentic-core-frontend
+  ports:
+    - protocol: TCP
+      port: 8083
+      targetPort: 8083
